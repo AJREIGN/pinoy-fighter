@@ -25,11 +25,14 @@ export default class FightScene_Magellan extends Phaser.Scene {
         this.load.image("ground", "/assets/stages/ground.png");
 
         const charSheets = ["idle","run","jump","fall","attack1","attack2","special","hit","death"];
+
+        // Player Magellan
         charSheets.forEach(sheet => {
             this.load.spritesheet("player_" + sheet, "/assets/characters/magellan/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
         });
 
-        const aiChoices = ["panday", "hunter", "lapulapu"];
+        // Enemy: random between Lapulapu and Panday
+        const aiChoices = ["lapulapu","panday"];
         this.aiChar = Phaser.Utils.Array.GetRandom(aiChoices);
         charSheets.forEach(sheet => {
             this.load.spritesheet("enemy_" + sheet, "/assets/characters/" + this.aiChar + "/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
@@ -46,7 +49,7 @@ export default class FightScene_Magellan extends Phaser.Scene {
         ground.refreshBody();
 
         this.player = this.createCharacter(300, groundY-100, "player");
-        this.enemy = this.createCharacter(width-300, groundY-100, "enemy");
+        this.enemy = this.createCharacter(width-300, groundY-100, "enemy", this.aiChar);
 
         this.physics.add.collider(this.player, ground);
         this.physics.add.collider(this.enemy, ground);
@@ -65,7 +68,7 @@ export default class FightScene_Magellan extends Phaser.Scene {
         this.startRound();
     }
 
-    createCharacter(x, y, prefix) {
+    createCharacter(x, y, prefix, enemyType=null) {
         const char = this.physics.add.sprite(x, y, prefix + "_idle").setScale(2).setCollideWorldBounds(true);
         char.body.setGravityY(1000);
         char.body.setDragX(600);
@@ -77,24 +80,39 @@ export default class FightScene_Magellan extends Phaser.Scene {
         char.attackQueue = [];
         char.comboCount = 0;
         char.superMeter = 0;
-        this.createAnimations(prefix);
+
+        this.createAnimations(prefix, enemyType);
         char.play(prefix + "_idle");
         return char;
     }
 
-    createAnimations(prefix) {
-        const anims = ["idle","run","jump","fall","attack1","attack2","special","hit","death"];
-        anims.forEach(anim => {
-            const frames = { start: 0, end: 9 }; // ensure spritesheets have 10 frames
+    createAnimations(prefix, enemyType=null) {
+        const playerFrames = { 
+            idle:10, run:6, jump:2, fall:2, attack1:4, attack2:4, special:5, hit:3, death:9 
+        };
+        const enemyFramesMap = {
+            hunter: { idle:8, run:8, jump:2, fall:2, attack1:5, attack2:5, special:5, hit:3, death:8 },
+            lapulapu: { idle:10, run:8, jump:3, fall:3, attack1:7, attack2:7, special:8, hit:3, death:7 },
+            panday: { idle:4, run:6, jump:2, fall:2, attack1:6, attack2:6, special:8, hit:3, death:6 }
+        };
+
+        const frames = enemyType ? enemyFramesMap[enemyType] : playerFrames;
+
+        Object.keys(frames).forEach(anim => {
+            const frameCount = frames[anim];
             const rate = anim.includes("attack") ? 8 : anim==="hit"?6:10;
-            const repeat = (anim==="idle"||anim==="run")?-1:0;
-            this.anims.create({ key: prefix + "_" + anim, frames: this.anims.generateFrameNumbers(prefix + "_" + anim, frames), frameRate: rate, repeat });
+            const repeat = (anim==="idle"||anim==="run") ? -1 : 0;
+            this.anims.create({
+                key: prefix + "_" + anim,
+                frames: this.anims.generateFrameNumbers(prefix + "_" + anim, { start:0, end: frameCount-1 }),
+                frameRate: rate,
+                repeat
+            });
         });
     }
 
     setupHealthBars(width) {
         const barWidth = 325, barHeight = 20;
-
         this.playerHealthBarBG = this.add.rectangle(20,40,barWidth,barHeight+8,0x222222).setOrigin(0,0.5).setStrokeStyle(3,0xffffff);
         this.playerHealthBar = this.add.rectangle(20,40,barWidth,barHeight,0x00ff00).setOrigin(0,0.5);
         this.playerNameText = this.add.text(20,70,"MAGELLAN",{fontFamily:"Arial Black",fontSize:20,color:"#fff",stroke:"#000",strokeThickness:4}).setOrigin(0,0.5);
@@ -115,48 +133,139 @@ export default class FightScene_Magellan extends Phaser.Scene {
 
     startRound() {
         const { width, height } = this.cameras.main;
-        this.player.body.moves = false;
-        this.enemy.body.moves = false;
-        this.countdownActive = true;
+        this.player.body.moves=false; this.enemy.body.moves=false;
+        this.countdownActive=true;
 
         this.readyText = this.add.text(width/2,height/2,"ROUND "+this.round,{fontFamily:"Impact",fontSize:80,color:"#ffff00",stroke:"#ff9900",strokeThickness:8}).setOrigin(0.5);
 
-        let count = 3;
-        const countdown = this.time.addEvent({
+        let count=3;
+        if(this.countdownEvent) this.countdownEvent.remove(false);
+        this.countdownEvent = this.time.addEvent({
             delay:1000, repeat:3,
-            callback:()=>{
+            callback: ()=>{
                 if(count>0){ this.readyText.setText(count); count--; }
                 else{
                     this.readyText.setText("FIGHT!");
-                    this.player.body.moves = true;
-                    this.enemy.body.moves = true;
-                    this.countdownActive = false;
+                    this.player.body.moves=true; this.enemy.body.moves=true;
+                    this.countdownActive=false;
                     this.time.delayedCall(1000,()=>this.readyText.setVisible(false));
                 }
             }
         });
 
-        this.timeLeft = 60;
-        this.timerText.setText(this.timeLeft);
-        this.timerEvent = this.time.addEvent({
+        this.timeLeft=60; this.timerText.setText(this.timeLeft);
+        if(this.timerEvent) this.timerEvent.remove(false);
+        this.timerEvent=this.time.addEvent({
             delay:1000, loop:true,
             callback:()=>{
                 if(this.timeLeft>0){ this.timeLeft--; this.timerText.setText(this.timeLeft); }
-                else { if(!this.player.isDead && !this.enemy.isDead) this.drawFight(); this.timerEvent.remove(false); }
+                else{ if(!this.player.isDead && !this.enemy.isDead) this.drawFight(); this.timerEvent.remove(false); }
             }
         });
     }
 
+    // --- ATTACK & HIT LOGIC ---
+    queueAttack(char,type,damage){
+        const jumpAttack = (type==="jumpAttack");
+        char.attackQueue.push({type,damage,jumpAttack});
+        if(!char.isAttacking) this.processAttackQueue(char);
+    }
+
+    processAttackQueue(char){
+        if(char.attackQueue.length===0){ char.isAttacking=false; return;}
+        if(char.isProcessingAttack) return;
+        char.isProcessingAttack=true;
+
+        const {type,damage,jumpAttack} = char.attackQueue.shift();
+        const animKey = (type==="attack1")
+            ? ((char===this.player?"player":"enemy") + (this.attackToggle?"_attack1":"_attack2"))
+            : (char===this.player?"player":"enemy")+"_special";
+
+        if(type==="attack1") this.attackToggle=!this.attackToggle;
+        char.play(animKey,true);
+
+        const hitDelay=(type.includes("attack")?200:300);
+        this.time.delayedCall(hitDelay,()=>{
+            const target = char===this.player? this.enemy : this.player;
+            if(!target.isDead) this.hitCharacter(char,target,damage,jumpAttack);
+        });
+
+        char.once(Phaser.Animations.Events.ANIMATION_COMPLETE, ()=>{
+            this.updateAnimationAfterAttack(char);
+            char.isProcessingAttack=false;
+            this.processAttackQueue(char);
+        });
+    }
+
+    hitCharacter(attacker,target,damage,jumpAttack=false){
+        if(target.isDead || attacker.isDead) return;
+        if(!target.body.onFloor() && !jumpAttack) return;
+
+        if(!target.hitQueue) target.hitQueue=[];
+        target.hitQueue.push(damage);
+        if(target.isProcessingHit) return;
+
+        target.isProcessingHit=true;
+        const processHit = ()=>{
+            if(target.hitQueue.length===0){ target.isProcessingHit=false; return;}
+            const dmg=target.hitQueue.shift();
+            target.health-=dmg;
+            target.comboCount++;
+            if(target.health<0) target.health=0;
+
+            target.setTint(0xff0000);
+            this.time.delayedCall(100,()=>{ if(!target.isDead) target.clearTint(); });
+
+            if(target===this.player) this.playerHealthBar.width=(target.health/target.maxHealth)*325;
+            else this.enemyHealthBar.width=(target.health/target.maxHealth)*325;
+
+            this.updateWinCounters();
+
+            if(target.health<=0){
+                target.isDead=true;
+                target.setVelocity(0);
+                target.play(target===this.player?"player_death":"enemy_death",true);
+                this.time.delayedCall(1000,()=>{ target===this.player?this.endFight("ENEMY WINS!"):this.endFight("PLAYER WINS!"); });
+                return;
+            }
+
+            target.play(target===this.player?"player_hit":"enemy_hit",true);
+            target.once(Phaser.Animations.Events.ANIMATION_COMPLETE, ()=>{
+                if(target.isDead) return;
+                if(!target.body.onFloor()){
+                    const anim=target.body.velocity.y<0
+                        ? (target===this.player?"player":"enemy")+"_jump"
+                        : (target===this.player?"player":"enemy")+"_fall";
+                    target.play(anim,true);
+                } else target.play(target===this.player?"player_idle":"enemy_idle",true);
+                this.time.delayedCall(50,processHit);
+            });
+        };
+        processHit();
+    }
+
+    updateAnimationAfterAttack(char){
+        if(!char.body.onFloor()){
+            const anim = char.body.velocity.y<0
+                ? (char===this.player?"player":"enemy")+"_jump"
+                : (char===this.player?"player":"enemy")+"_fall";
+            char.play(anim,true);
+        } else char.play(char===this.player?"player_idle":"enemy_idle",true);
+    }
+
+    updateWinCounters(){
+        this.playerWinsText.setText("Wins: "+this.playerWins);
+        this.enemyWinsText.setText("Wins: "+this.enemyWins);
+        this.playerComboText.setText("Combo: "+this.player.comboCount);
+        this.enemyComboText.setText("Combo: "+this.enemy.comboCount);
+    }
+
     drawFight(){
-        this.player.body.moves = false;
-        this.enemy.body.moves = false;
-        this.player.attackQueue = [];
-        this.enemy.attackQueue = [];
-        this.player.play("player_idle",true);
-        this.enemy.play("enemy_idle",true);
-        this.koText.setText("DRAW!");
-        this.koText.setVisible(true);
-        this.input.keyboard.enabled = false;
+        this.player.body.moves=false; this.enemy.body.moves=false;
+        this.player.attackQueue=[]; this.enemy.attackQueue=[];
+        this.player.play("player_idle",true); this.enemy.play("enemy_idle",true);
+        this.koText.setText("DRAW!"); this.koText.setVisible(true);
+        this.input.keyboard.enabled=false;
         this.playerWins++; this.enemyWins++;
         this.updateWinCounters();
         this.time.delayedCall(3000, ()=>{
@@ -176,51 +285,33 @@ export default class FightScene_Magellan extends Phaser.Scene {
         this.startRound();
     }
 
-    updateWinCounters(){
-        this.playerWinsText.setText("Wins: "+this.playerWins);
-        this.enemyWinsText.setText("Wins: "+this.enemyWins);
-        this.playerComboText.setText("Combo: "+this.player.comboCount);
-        this.enemyComboText.setText("Combo: "+this.enemy.comboCount);
-    }
-
-    update(){
-        if(this.countdownActive) return;
-        this.handleAutoFace();
-        this.handlePlayerInput();
-        if(!this.enemy.isDead) this.handleEnemyAI();
-    }
-
     handleAutoFace(){
-        if(this.player.x < this.enemy.x){ this.player.flipX=false; this.enemy.flipX=true;}
-        else{ this.player.flipX=true; this.enemy.flipX=false;}
+        if(this.player.x < this.enemy.x){ this.player.flipX=false; this.enemy.flipX=true; }
+        else { this.player.flipX=true; this.enemy.flipX=false; }
     }
 
     handlePlayerInput(){
-    const speed=220,jumpForce=-650;
-    const { left,right,up,attack1,attack2,special } = this.keys;
+        const speed=220,jumpForce=-650;
+        const { left,right,up,attack1,attack2,special } = this.keys;
 
-    if(left.isDown){ this.player.setAccelerationX(-speed*2); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_run",true);}
-    else if(right.isDown){ this.player.setAccelerationX(speed*2); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_run",true);}
-    else { this.player.setAccelerationX(0); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_idle",true);}
-    if(up.isDown && this.player.body.onFloor()){ this.player.setVelocityY(jumpForce); if(!this.player.isAttacking) this.player.play("player_jump",true);}
-    if(!this.player.body.onFloor() && this.player.body.velocity.y>0 && !this.player.isAttacking) this.player.play("player_fall",true);
+        if(left.isDown){ this.player.setAccelerationX(-speed*2); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_run",true);}
+        else if(right.isDown){ this.player.setAccelerationX(speed*2); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_run",true);}
+        else { this.player.setAccelerationX(0); if(this.player.body.onFloor()&&!this.player.isAttacking) this.player.play("player_idle",true);}
+        if(up.isDown && this.player.body.onFloor()){ this.player.setVelocityY(jumpForce); if(!this.player.isAttacking) this.player.play("player_jump",true);}
+        if(!this.player.body.onFloor() && this.player.body.velocity.y>0 && !this.player.isAttacking) this.player.play("player_fall",true);
 
-    // Queue attacks: jump attacks if airborne
-    if(Phaser.Input.Keyboard.JustDown(attack1) && !this.player.isDead){
-        if(!this.player.body.onFloor()) this.queueAttack(this.player,"jumpAttack",5);
-        else this.queueAttack(this.player,"attack1",5);
-    }
-    if(Phaser.Input.Keyboard.JustDown(attack2) && !this.player.isDead){
-        if(!this.player.body.onFloor()) this.queueAttack(this.player,"jumpAttack",7);
-        else this.queueAttack(this.player,"attack2",7);
-    }
-    if(Phaser.Input.Keyboard.JustDown(special) && !this.player.isDead){
-        if(!this.player.body.onFloor()) this.queueAttack(this.player,"jumpAttack",15);
-        else this.queueAttack(this.player,"special",15);
-    }
+        if(Phaser.Input.Keyboard.JustDown(attack1) && !this.player.isDead){
+            this.queueAttack(this.player, this.player.body.onFloor()?"attack1":"jumpAttack",5);
+        }
+        if(Phaser.Input.Keyboard.JustDown(attack2) && !this.player.isDead){
+            this.queueAttack(this.player, this.player.body.onFloor()?"attack2":"jumpAttack",7);
+        }
+        if(Phaser.Input.Keyboard.JustDown(special) && !this.player.isDead){
+            this.queueAttack(this.player, this.player.body.onFloor()?"special":"jumpAttack",15);
+        }
 
-    if(!this.player.isAttacking) this.processAttackQueue(this.player);
-}
+        if(!this.player.isAttacking) this.processAttackQueue(this.player);
+    }
 
     handleEnemyAI(){
         const aiSpeed=220;
@@ -236,8 +327,8 @@ export default class FightScene_Magellan extends Phaser.Scene {
         }
 
         if(!this.enemy.isAttacking){
-            if(absDist>reactRange-30){ this.enemy.setAccelerationX(dist>0? aiSpeed*2 : -aiSpeed*2); if(this.enemy.body.onFloor()) this.enemy.play("enemy_run",true);}
-            else { this.enemy.setAccelerationX(0); if(this.enemy.body.onFloor() && !this.enemy.anims.isPlaying) this.enemy.play("enemy_idle",true);}
+            if(absDist>reactRange-30){ this.enemy.setAccelerationX(dist>0? aiSpeed*2:-aiSpeed*2); if(this.enemy.body.onFloor()) this.enemy.play("enemy_run",true);}
+            else { this.enemy.setAccelerationX(0); if(this.enemy.body.onFloor()&&!this.enemy.anims.isPlaying) this.enemy.play("enemy_idle",true);}
         }
 
         if(this.enemy.body.onFloor() && Math.random()<jumpChance){ this.enemy.setVelocityY(-650); this.enemy.play("enemy_jump",true);}
@@ -251,98 +342,11 @@ export default class FightScene_Magellan extends Phaser.Scene {
         if(!this.enemy.isAttacking) this.processAttackQueue(this.enemy);
     }
 
-    queueAttack(char,type,damage){
-    let jumpAttack = false;
-    if(type==="jumpAttack") jumpAttack = true;
-
-    char.attackQueue.push({type,damage,jumpAttack});
-    if(!char.isAttacking) this.processAttackQueue(char);
-}
-
-processAttackQueue(char){
-    if(char.attackQueue.length===0){ char.isAttacking=false; return;}
-    char.isAttacking=true;
-    const {type,damage,jumpAttack}=char.attackQueue.shift();
-    const animKey = (type === "attack1") 
-    ? (this.attackToggle 
-        ? (char === this.player ? "player" : "enemy") + "_attack1" 
-        : (char === this.player ? "player" : "enemy") + "_attack2"
-      )
-    : (char === this.player ? "player" : "enemy") + "_special";
-
-    if(type==="attack1") this.attackToggle=!this.attackToggle;
-    char.play(animKey,true);
-
-    const hitDelay = (type.includes("attack") ? 200 : 300);
-    this.time.delayedCall(hitDelay,()=>{
-        const target = char===this.player? this.enemy: this.player;
-        if(!target.isDead) this.hitCharacter(char,target,damage,jumpAttack);
-    });
-
-    char.once(Phaser.Animations.Events.ANIMATION_COMPLETE, ()=>{
-        this.updateAnimationAfterAttack(char);
-        this.time.delayedCall(50,()=>this.processAttackQueue(char));
-    });
-}
-
-hitCharacter(attacker,target,damage,jumpAttack=false){
-    if(target.isDead || attacker.isDead) return;
-
-    // --- AIR INVULNERABILITY: only hit if on ground or jumpAttack ---
-    if(!target.body.onFloor() && !jumpAttack) return;
-
-    if(!target.hitQueue) target.hitQueue=[];
-    target.hitQueue.push(damage);
-    if(target.isProcessingHit) return;
-
-    const processHit = ()=>{
-        if(target.hitQueue.length===0){ target.isProcessingHit=false; return;}
-        target.isProcessingHit=true;
-        const dmg = target.hitQueue.shift();
-        target.health -= dmg;
-        target.comboCount++;
-        if(target.health<0) target.health=0;
-
-        target.setTint(0xff0000);
-        this.time.delayedCall(100, ()=>{ if(!target.isDead) target.clearTint(); });
-
-        if(target===this.player) this.playerHealthBar.width=(target.health/target.maxHealth)*325;
-        else this.enemyHealthBar.width=(target.health/target.maxHealth)*325;
-
-        this.updateWinCounters();
-
-        if(target.health<=0){
-            target.isDead=true;
-            target.setVelocity(0);
-            target.play(target===this.player?"player_death":"enemy_death",true);
-            this.time.delayedCall(1000,()=>{ target===this.player?this.endFight("ENEMY WINS!"):this.endFight("PLAYER WINS!"); });
-            return;
-        }
-
-        target.play(target===this.player?"player_hit":"enemy_hit",true);
-        target.once(Phaser.Animations.Events.ANIMATION_COMPLETE, ()=>{
-            if(target.isDead) return;
-            if(!target.body.onFloor()){
-                const jumpFallAnim = target.body.velocity.y < 0 
-    ? (target === this.player ? "player" : "enemy") + "_jump" 
-    : (target === this.player ? "player" : "enemy") + "_fall";
-
-                target.play(jumpFallAnim,true);
-            } else target.play(target===this.player?"player_idle":"enemy_idle",true);
-            this.time.delayedCall(50,processHit);
-        });
-    };
-    processHit();
-}
-
-    updateAnimationAfterAttack(char){
-        if (!char.body.onFloor()) {
-    const anim = char.body.velocity.y < 0 
-        ? (char === this.player ? "player" : "enemy") + "_jump" 
-        : (char === this.player ? "player" : "enemy") + "_fall";
-    char.play(anim, true);
-}
-        else char.play(char===this.player?"player_idle":"enemy_idle",true);
+    update(){
+        if(this.countdownActive) return;
+        this.handleAutoFace();
+        this.handlePlayerInput();
+        if(!this.enemy.isDead) this.handleEnemyAI();
     }
 
     endFight(result){
@@ -351,6 +355,3 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
         this.time.delayedCall(3000, ()=>this.scene.start("SinglePlayerMenuScene"));
     }
 }
-
-
-
