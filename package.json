@@ -5,6 +5,8 @@
   "main": "game.js",
   "scripts": {
     "dev": "vite"
+    "build": "vite build",
+  "serve": "node server.js"
   },
   "keywords": [],
   "author": "",
