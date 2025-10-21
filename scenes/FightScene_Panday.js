@@ -66,7 +66,7 @@ export default class FightScene_Panday extends Phaser.Scene {
     }
 
     createCharacter(x, y, prefix) {
-        const char = this.physics.add.sprite(x, y, `${prefix}_idle`).setScale(2).setCollideWorldBounds(true);
+        const char = this.physics.add.sprite(x, y, prefix + "_idle").setScale(2).setCollideWorldBounds(true);
         char.body.setGravityY(1000);
         char.body.setDragX(600);
         char.body.setMaxVelocity(300, 800);
@@ -78,7 +78,7 @@ export default class FightScene_Panday extends Phaser.Scene {
         char.comboCount = 0;
         char.superMeter = 0;
         this.createAnimations(prefix);
-        char.play(`${prefix}_idle`);
+        char.play(prefix + "_idle");
         return char;
     }
 
@@ -88,7 +88,7 @@ export default class FightScene_Panday extends Phaser.Scene {
             const frames = { start: 0, end: 9 }; // ensure spritesheets have 10 frames
             const rate = anim.includes("attack") ? 8 : anim==="hit"?6:10;
             const repeat = (anim==="idle"||anim==="run")?-1:0;
-            this.anims.create({ key: `${prefix}_${anim}`, frames: this.anims.generateFrameNumbers(`${prefix}_${anim}`, frames), frameRate: rate, repeat });
+            this.anims.create({ key: prefix + "_" + anim, frames: this.anims.generateFrameNumbers(prefix + "_" + anim, frames), frameRate: rate, repeat });
         });
     }
 
@@ -271,7 +271,13 @@ processAttackQueue(char){
     if(char.attackQueue.length===0){ char.isAttacking=false; return;}
     char.isAttacking=true;
     const {type,damage,jumpAttack}=char.attackQueue.shift();
-    const animKey = (type==="attack1") ? (this.attackToggle?`${char===this.player?"player":"enemy"}_attack1`:`${char===this.player?"player":"enemy"}_attack2`) : `${char===this.player?"player":"enemy"}_special`;
+   const animKey = (type === "attack1") 
+    ? (this.attackToggle 
+        ? (char === this.player ? "player" : "enemy") + "_attack1" 
+        : (char === this.player ? "player" : "enemy") + "_attack2"
+      )
+    : (char === this.player ? "player" : "enemy") + "_special";
+
     if(type==="attack1") this.attackToggle=!this.attackToggle;
     char.play(animKey,true);
 
@@ -325,7 +331,10 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
         target.once(Phaser.Animations.Events.ANIMATION_COMPLETE, ()=>{
             if(target.isDead) return;
             if(!target.body.onFloor()){
-                const jumpFallAnim = target.body.velocity.y<0 ? `${target===this.player?"player":"enemy"}_jump`:`${target===this.player?"player":"enemy"}_fall`;
+                const jumpFallAnim = target.body.velocity.y < 0 
+    ? (target === this.player ? "player" : "enemy") + "_jump" 
+    : (target === this.player ? "player" : "enemy") + "_fall";
+
                 target.play(jumpFallAnim,true);
             } else target.play(target===this.player?"player_idle":"enemy_idle",true);
             this.time.delayedCall(50,processHit);
@@ -335,7 +344,13 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
 }
 
     updateAnimationAfterAttack(char){
-        if(!char.body.onFloor()) char.play(char.body.velocity.y<0?`${char===this.player?"player":"enemy"}_jump`:`${char===this.player?"player":"enemy"}_fall`,true);
+        if (!char.body.onFloor()) {
+    const anim = char.body.velocity.y < 0 
+        ? (char === this.player ? "player" : "enemy") + "_jump" 
+        : (char === this.player ? "player" : "enemy") + "_fall";
+    char.play(anim, true);
+}
+
         else char.play(char===this.player?"player_idle":"enemy_idle",true);
     }
 
@@ -345,5 +360,6 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
         this.time.delayedCall(3000, ()=>this.scene.start("SinglePlayerMenuScene"));
     }
 }
+
 
 
