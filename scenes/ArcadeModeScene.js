@@ -7,23 +7,23 @@ export default class ArcadeModeScene extends Phaser.Scene {
 
   preload() {
     // 🌌 Background + UI assets
-    this.load.image("bg", "assets/images/bg.png");
-    this.load.image("frame", "assets/images/frame.png");
+    this.load.image("bg", "/assets/images/bg.png");
+    this.load.image("frame", "/assets/images/frame.png");
 
 
-    this.load.spritesheet("hunter", "assets/characters/hunter/idle.png", {
+    this.load.spritesheet("hunter", "/assets/characters/hunter/idle.png", {
       frameWidth: 180,
       frameHeight: 180,
     });
-    this.load.spritesheet("lapulapu", "assets/characters/LapuLapu/idle.png", {
+    this.load.spritesheet("lapulapu", "/assets/characters/LapuLapu/idle.png", {
       frameWidth: 180,
       frameHeight: 180,
     });
-    this.load.spritesheet("panday", "assets/characters/panday/idle.png", {
+    this.load.spritesheet("panday", "/assets/characters/panday/idle.png", {
       frameWidth: 180,
       frameHeight: 180,
     });
-    this.load.spritesheet("magellan", "assets/characters/magellan/idle.png", {
+    this.load.spritesheet("magellan", "/assets/characters/magellan/idle.png", {
       frameWidth: 180,
       frameHeight: 180,
     });
@@ -143,3 +143,4 @@ export default class ArcadeModeScene extends Phaser.Scene {
     });
   }
 }
+
