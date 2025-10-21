@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 
-export default class FightScene_manigbasay extends Phaser.Scene {
+export default class FightScene_Panday extends Phaser.Scene {
     constructor() {
-        super("FightScene_manigbasay");
+        super("FightScene_Panday");
     }
 
     init(data) {
@@ -25,11 +25,11 @@ export default class FightScene_manigbasay extends Phaser.Scene {
         this.load.image("ground", "/assets/stages/ground.png");
 
         const charSheets = ["idle","run","jump","fall","attack1","attack2","special","hit","death"];
-        charSheets.forEach(sheet => {
+         charSheets.forEach(sheet => {
             this.load.spritesheet("player_$" + sheet, "/assets/characters/hunter/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
         });
 
-        const aiChoices = ["lapulapu","panday"];
+        const aiChoices = ["magellan", "hunter", "lapulapu"];
         this.aiChar = Phaser.Utils.Array.GetRandom(aiChoices);
         charSheets.forEach(sheet => {
             this.load.spritesheet("enemy_" + sheet, "/assets/characters/" + this.aiChar + "/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
@@ -97,7 +97,7 @@ export default class FightScene_manigbasay extends Phaser.Scene {
 
         this.playerHealthBarBG = this.add.rectangle(20,40,barWidth,barHeight+8,0x222222).setOrigin(0,0.5).setStrokeStyle(3,0xffffff);
         this.playerHealthBar = this.add.rectangle(20,40,barWidth,barHeight,0x00ff00).setOrigin(0,0.5);
-        this.playerNameText = this.add.text(20,70,"HUNTER",{fontFamily:"Arial Black",fontSize:20,color:"#fff",stroke:"#000",strokeThickness:4}).setOrigin(0,0.5);
+        this.playerNameText = this.add.text(20,70,"PANDAY",{fontFamily:"Arial Black",fontSize:20,color:"#fff",stroke:"#000",strokeThickness:4}).setOrigin(0,0.5);
         this.playerWinsText = this.add.text(20,80,"Wins: 0",{fontFamily:"Arial Black",fontSize:22,color:"#00ff00",stroke:"#000",strokeThickness:4}).setOrigin(0,0);
 
         this.enemyHealthBarBG = this.add.rectangle(width-20,40,barWidth,barHeight+8,0x222222).setOrigin(1,0.5).setStrokeStyle(3,0xffffff);
@@ -259,16 +259,25 @@ export default class FightScene_manigbasay extends Phaser.Scene {
     if(!char.isAttacking) this.processAttackQueue(char);
 }
 
+queueAttack(char,type,damage){
+    let jumpAttack = false;
+    if(type==="jumpAttack") jumpAttack = true;
+
+    char.attackQueue.push({type,damage,jumpAttack});
+    if(!char.isAttacking) this.processAttackQueue(char);
+}
+
 processAttackQueue(char){
     if(char.attackQueue.length===0){ char.isAttacking=false; return;}
     char.isAttacking=true;
     const {type,damage,jumpAttack}=char.attackQueue.shift();
-    const animKey = (type === "attack1") 
+   const animKey = (type === "attack1") 
     ? (this.attackToggle 
         ? (char === this.player ? "player" : "enemy") + "_attack1" 
         : (char === this.player ? "player" : "enemy") + "_attack2"
       )
     : (char === this.player ? "player" : "enemy") + "_special";
+
     if(type==="attack1") this.attackToggle=!this.attackToggle;
     char.play(animKey,true);
 
@@ -323,8 +332,9 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
             if(target.isDead) return;
             if(!target.body.onFloor()){
                 const jumpFallAnim = target.body.velocity.y < 0 
-                ? (target === this.player ? "player" : "enemy") + "_jump" 
-                : (target === this.player ? "player" : "enemy") + "_fall";
+    ? (target === this.player ? "player" : "enemy") + "_jump" 
+    : (target === this.player ? "player" : "enemy") + "_fall";
+
                 target.play(jumpFallAnim,true);
             } else target.play(target===this.player?"player_idle":"enemy_idle",true);
             this.time.delayedCall(50,processHit);
@@ -334,12 +344,13 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
 }
 
     updateAnimationAfterAttack(char){
-       if (!char.body.onFloor()) {
+        if (!char.body.onFloor()) {
     const anim = char.body.velocity.y < 0 
         ? (char === this.player ? "player" : "enemy") + "_jump" 
         : (char === this.player ? "player" : "enemy") + "_fall";
     char.play(anim, true);
 }
+
         else char.play(char===this.player?"player_idle":"enemy_idle",true);
     }
 
@@ -349,6 +360,5 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
         this.time.delayedCall(3000, ()=>this.scene.start("SinglePlayerMenuScene"));
     }
 }
-
 
 
