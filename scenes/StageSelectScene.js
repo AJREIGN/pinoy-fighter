@@ -15,10 +15,10 @@ export default class StageSelectScene extends Phaser.Scene {
 
   preload() {
     // 🖼️ Load all stage images (originals are 1920×1080, auto-scaled)
-    this.load.image("stage1", "assets/stages/carbon_market.png");
-    this.load.image("stage2", "assets/stages/lasang.png");
-    this.load.image("stage3", "assets/stages/kapatagan.png");
-    this.load.image("stage4", "assets/stages/takipsilim.png");
+    this.load.image("stage1", "/assets/stages/carbon_market.png");
+    this.load.image("stage2", "/assets/stages/lasang.png");
+    this.load.image("stage3", "/assets/stages/kapatagan.png");
+    this.load.image("stage4", "/assets/stages/takipsilim.png");
   }
 
   create() {
@@ -154,3 +154,4 @@ export default class StageSelectScene extends Phaser.Scene {
     });
   }
 }
+
