@@ -46,7 +46,7 @@ export default class FinalizationScene extends Phaser.Scene {
       "Takipsilim": "takipsilim"
     };
     const stageFile = stageMap[this.selectedStage] || "carbon_market";
-    this.load.image("finalStageBG", `assets/stages/${stageFile}.png`);
+    this.load.image("finalStageBG", `/assets/stages/${stageFile}.png`);
 
     // Load character sprite
     const charMap = {
@@ -57,7 +57,7 @@ export default class FinalizationScene extends Phaser.Scene {
     };
     const charFolder = charMap[this.selectedCharacter];
     if(charFolder){
-      this.load.spritesheet("finalFighter", `assets/characters/${charFolder}/idle.png`, { frameWidth: 180, frameHeight: 180 });
+      this.load.spritesheet("finalFighter", `/assets/characters/${charFolder}/idle.png`, { frameWidth: 180, frameHeight: 180 });
     } else {
       console.warn("Unknown character:", this.selectedCharacter);
     }
@@ -149,3 +149,4 @@ export default class FinalizationScene extends Phaser.Scene {
     });
   }
 }
+
