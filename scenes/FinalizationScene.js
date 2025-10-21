@@ -97,7 +97,7 @@ export default class FinalizationScene extends Phaser.Scene {
       fontFamily: "Impact",
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height * 0.22, `STAGE: ${this.selectedStage}`, {
+    this.add.text(width / 2, height * 0.22, "STAGE:" + this.selectedStage, {
       fontSize: "28px",
       fill: "#ffffff",
       stroke: "#000",
@@ -149,5 +149,6 @@ export default class FinalizationScene extends Phaser.Scene {
     });
   }
 }
+
 
 
