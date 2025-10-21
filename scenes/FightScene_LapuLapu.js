@@ -32,7 +32,7 @@ export default class FightScene_LapuLapu extends Phaser.Scene {
         const aiChoices = ["panday", "hunter", "magellan"];
         this.aiChar = Phaser.Utils.Array.GetRandom(aiChoices);
         charSheets.forEach(sheet => {
-            this.load.spritesheet("enemy_" + sheet, "/assets/characters/" + this.aiChar} + "/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
+            this.load.spritesheet("enemy_" + sheet, "/assets/characters/" + this.aiChar + "/" + sheet + ".png", { frameWidth: 180, frameHeight: 180 });
         });
     }
 
@@ -337,5 +337,6 @@ hitCharacter(attacker,target,damage,jumpAttack=false){
         this.time.delayedCall(3000, ()=>this.scene.start("SinglePlayerMenuScene"));
     }
 }
+
 
 
